@@ -38,8 +38,8 @@ pub fn get_args() -> MyResult<Config> {
         .author("tjbo")
         .about("Rust head")
         .arg(
-            Arg::with_name("file")
-                .value_name("file")
+            Arg::with_name("files")
+                .value_name("files")
                 .help("Input file")
                 .multiple(true)
                 .default_value("-"),
@@ -47,25 +47,41 @@ pub fn get_args() -> MyResult<Config> {
         .arg(
             Arg::with_name("lines")
                 .short("n")
+                .long("lines")
+                .value_name("LINES")
                 .help("print the num line instead of 10")
-                .takes_value(true),
+                .default_value("10"),
         )
         .arg(
             Arg::with_name("bytes")
                 .short("c")
-                .help("print the first NUM of bytes")
-                .takes_value(true),
+                .long("bytes")
+                .value_name("BYTES")
+                .takes_value(true)
+                .conflicts_with("lines")
+                .help("print the first NUM of bytes"),
         )
         .get_matches();
 
+    let lines = matches
+        .value_of("lines")
+        .map(parse_positive_int)
+        .transpose()
+        .map_err(|e| format!("illegal byte count -- {}", e))?;
+
+    let bytes = matches
+        .value_of("bytes")
+        .map(parse_positive_int)
+        .transpose()
+        .map_err(|e| format!("illegal byte count -- {}", e))?;
+
     Ok(Config {
         files: matches.values_of_lossy("files").unwrap(),
-        lines: parse_positive_int(matches.value_of("lines").unwrap_or("")).unwrap_or(10),
-        bytes: parse_positive_int(matches.value_of("bytes").unwrap_or("")).ok(),
+        lines: lines.unwrap(),
+        bytes,
     })
 }
 
 pub fn run(config: Config) -> MyResult<()> {
-    println!("run");
     Ok(())
 }

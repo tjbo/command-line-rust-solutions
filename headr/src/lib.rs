@@ -92,10 +92,25 @@ pub fn open(filename: &str) -> MyResult<Box<dyn BufRead>> {
 }
 
 pub fn run(config: Config) -> MyResult<()> {
-    for filename in config.files {
-        match open(&filename) {
-            Ok(_) => println!("{}", &filename),
-            Err(err) => println!("{}:{}", &filename, err),
+    dbg!(&config);
+
+    match config.bytes {
+        Some(v) => {
+            println!("{}", v);
+        }
+        None => {
+            for filename in config.files {
+                match open(&filename) {
+                    Ok(file) => {
+                        for (line_num, line_result) in file.lines().enumerate() {
+                            if line_num < 10 {
+                                println!("{}", line_result?);
+                            }
+                        }
+                    }
+                    Err(err) => println!("{}:{}", &filename, err),
+                }
+            }
         }
     }
     Ok(())

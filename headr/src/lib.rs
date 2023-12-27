@@ -100,9 +100,8 @@ pub fn run(config: Config) -> MyResult<()> {
                     let mut reader = BufReader::new(file);
                     let mut buffer = Vec::new();
                     reader.read_until(b'-', &mut buffer)?;
-                    for value in buffer {
-                        println!("BYTE: {}", value);
-                    }
+                    let slice = &buffer[..v];
+                    print!("{}", String::from_utf8_lossy(&slice));
                 }
 
                 None => {

@@ -40,7 +40,7 @@ pub fn get_args() -> MyResult<Config> {
         .arg(
             Arg::with_name("files")
                 .value_name("files")
-                .help("Input file")
+                .help("Input file(s)")
                 .multiple(true)
                 .default_value("-"),
         )
@@ -49,7 +49,7 @@ pub fn get_args() -> MyResult<Config> {
                 .short("n")
                 .long("lines")
                 .value_name("LINES")
-                .help("print the num line instead of 10")
+                .help("Number of lines")
                 .default_value("10"),
         )
         .arg(
@@ -59,7 +59,7 @@ pub fn get_args() -> MyResult<Config> {
                 .value_name("BYTES")
                 .takes_value(true)
                 .conflicts_with("lines")
-                .help("print the first NUM of bytes"),
+                .help("Number of bytes"),
         )
         .get_matches();
 

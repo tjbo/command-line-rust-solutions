@@ -94,22 +94,29 @@ pub fn open(filename: &str) -> MyResult<Box<dyn BufRead>> {
 pub fn run(config: Config) -> MyResult<()> {
     dbg!(&config);
     for filename in config.files {
-        match (open(&filename), config.bytes) {
-            (Ok(file), Some(v)) => {
+        match (open(&filename), config.lines, config.bytes) {
+            (Ok(file), 10, Some(v)) => {
                 let mut reader = BufReader::new(file);
                 let mut buffer = Vec::new();
                 reader.read_until(b'-', &mut buffer)?;
                 let slice = &buffer[..v];
                 print!("{}", String::from_utf8_lossy(&slice));
             }
-            (Ok(file), None) => {
+            (Ok(file), 10, None) => {
                 for (line_num, line_result) in file.lines().enumerate() {
                     if line_num < 10 {
                         println!("{}", line_result?);
                     }
                 }
             }
-            (Err(err), _) => {
+            (Ok(file), n, _) => {
+                for (line_num, line_result) in file.lines().enumerate() {
+                    if line_num < n {
+                        println!("{}", line_result?);
+                    }
+                }
+            }
+            (Err(err), _, _) => {
                 println!("{}:{}", &filename, err);
             }
         }

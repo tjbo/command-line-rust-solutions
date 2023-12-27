@@ -93,24 +93,27 @@ pub fn open(filename: &str) -> MyResult<Box<dyn BufRead>> {
 
 pub fn run(config: Config) -> MyResult<()> {
     dbg!(&config);
+    for filename in config.files {
+        match open(&filename) {
+            Ok(file) => match config.bytes {
+                Some(v) => {
+                    let mut reader = BufReader::new(file);
+                    let mut buffer = Vec::new();
+                    reader.read_until(b'-', &mut buffer)?;
+                    for value in buffer {
+                        println!("BYTE: {}", value);
+                    }
+                }
 
-    match config.bytes {
-        Some(v) => {
-            println!("{}", v);
-        }
-        None => {
-            for filename in config.files {
-                match open(&filename) {
-                    Ok(file) => {
-                        for (line_num, line_result) in file.lines().enumerate() {
-                            if line_num < 10 {
-                                println!("{}", line_result?);
-                            }
+                None => {
+                    for (line_num, line_result) in file.lines().enumerate() {
+                        if line_num < 10 {
+                            println!("{}", line_result?);
                         }
                     }
-                    Err(err) => println!("{}:{}", &filename, err),
                 }
-            }
+            },
+            Err(err) => println!("{}:{}", &filename, err),
         }
     }
     Ok(())

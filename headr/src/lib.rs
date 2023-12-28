@@ -67,7 +67,7 @@ pub fn run(config: Config) -> MyResult<()> {
     let num_files = config.files.len();
     for (file_num, filename) in config.files.iter().enumerate() {
         match open(filename) {
-            Err(err) => eprintln!("{}: {}", &filename, err),
+            Err(err) => eprintln!("{}: {}", filename, err),
             Ok(mut file) => {
                 if num_files > 1 {
                     println!(
@@ -86,11 +86,9 @@ pub fn run(config: Config) -> MyResult<()> {
                     let mut line = String::new();
                     for _ in 0..config.lines {
                         let bytes = file.read_line(&mut line)?;
-
                         if bytes == 0 {
                             break;
                         }
-
                         print!("{}", line);
                         line.clear();
                     }
@@ -101,9 +99,9 @@ pub fn run(config: Config) -> MyResult<()> {
     Ok(())
 }
 
-pub fn open(filename: &str) -> MyResult<Box<dyn BufRead>> {
+fn open(filename: &str) -> MyResult<Box<dyn BufRead>> {
     match filename {
-        "_" => Ok(Box::new(BufReader::new(io::stdin()))),
+        "-" => Ok(Box::new(BufReader::new(io::stdin()))),
         _ => Ok(Box::new(BufReader::new(File::open(filename)?))),
     }
 }

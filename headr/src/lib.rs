@@ -1,7 +1,7 @@
 use clap::{App, Arg};
 use std::error::Error;
 use std::fs::File;
-use std::io::{self, BufRead, BufReader};
+use std::io::{self, BufRead, BufReader, Read};
 
 type MyResult<T> = Result<T, Box<dyn Error>>;
 
@@ -12,28 +12,6 @@ pub struct Config {
     bytes: Option<usize>,
 }
 
-fn parse_positive_int(val: &str) -> MyResult<usize> {
-    match val.parse() {
-        Ok(n) if n > 0 => Ok(n),
-        _ => Err(From::from(val)),
-    }
-}
-
-#[test]
-fn test_parse_positive_int() {
-    let res = parse_positive_int("3");
-    assert!(res.is_ok());
-    assert_eq!(res.unwrap(), 3);
-
-    let res = parse_positive_int("foo");
-    assert!(res.is_err());
-    assert_eq!(res.unwrap_err().to_string(), "foo".to_string());
-
-    let res = parse_positive_int("0");
-    assert!(res.is_err());
-    assert_eq!(res.unwrap_err().to_string(), "0".to_string());
-}
-
 pub fn get_args() -> MyResult<Config> {
     let matches = App::new("headr")
         .version("0.1.0")
@@ -41,7 +19,7 @@ pub fn get_args() -> MyResult<Config> {
         .about("Rust head")
         .arg(
             Arg::with_name("files")
-                .value_name("files")
+                .value_name("FILE")
                 .help("Input file(s)")
                 .multiple(true)
                 .default_value("-"),
@@ -92,34 +70,64 @@ pub fn open(filename: &str) -> MyResult<Box<dyn BufRead>> {
 }
 
 pub fn run(config: Config) -> MyResult<()> {
-    dbg!(&config);
-    for filename in config.files {
-        match (open(&filename), config.lines, config.bytes) {
-            (Ok(file), 10, Some(v)) => {
-                let mut reader = BufReader::new(file);
-                let mut buffer = Vec::new();
-                reader.read_until(b'-', &mut buffer)?;
-                let slice = &buffer[..v];
-                print!("{}", String::from_utf8_lossy(&slice));
-            }
-            (Ok(file), 10, None) => {
-                for (line_num, line_result) in file.lines().enumerate() {
-                    if line_num < 10 {
-                        println!("{}", line_result?);
+    for (file_num, filename) in config.files.iter().enumerate() {
+        let num_files = config.files.len();
+
+        match open(filename) {
+            Ok(mut file) => {
+                if num_files > 1 {
+                    println!(
+                        "{}==> {} <==",
+                        if file_num > 0 { "\n" } else { "" },
+                        &filename
+                    );
+                }
+
+                if let Some(v) = config.bytes {
+                    let mut handle = file.take(v as u64);
+                    let mut buffer = vec![0; v];
+                    let bytes_read = handle.read(&mut buffer)?;
+                    print!("{}", String::from_utf8_lossy(&mut buffer[..bytes_read]));
+                } else {
+                    let mut line = String::new();
+                    for _ in 0..config.lines {
+                        let bytes = file.read_line(&mut line)?;
+
+                        if bytes == 0 {
+                            break;
+                        }
+
+                        print!("{}", line);
+                        line.clear();
                     }
                 }
             }
-            (Ok(file), n, _) => {
-                for (line_num, line_result) in file.lines().enumerate() {
-                    if line_num < n {
-                        println!("{}", line_result?);
-                    }
-                }
-            }
-            (Err(err), _, _) => {
+            Err(err) => {
                 println!("{}:{}", &filename, err);
             }
         }
     }
     Ok(())
+}
+
+fn parse_positive_int(val: &str) -> MyResult<usize> {
+    match val.parse() {
+        Ok(n) if n > 0 => Ok(n),
+        _ => Err(From::from(val)),
+    }
+}
+
+#[test]
+fn test_parse_positive_int() {
+    let res = parse_positive_int("3");
+    assert!(res.is_ok());
+    assert_eq!(res.unwrap(), 3);
+
+    let res = parse_positive_int("foo");
+    assert!(res.is_err());
+    assert_eq!(res.unwrap_err().to_string(), "foo".to_string());
+
+    let res = parse_positive_int("0");
+    assert!(res.is_err());
+    assert_eq!(res.unwrap_err().to_string(), "0".to_string());
 }

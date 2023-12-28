@@ -12,6 +12,7 @@ pub struct Config {
     bytes: Option<usize>,
 }
 
+// ----------
 pub fn get_args() -> MyResult<Config> {
     let matches = App::new("headr")
         .version("0.1.0")
@@ -62,17 +63,11 @@ pub fn get_args() -> MyResult<Config> {
     })
 }
 
-pub fn open(filename: &str) -> MyResult<Box<dyn BufRead>> {
-    match filename {
-        "_" => Ok(Box::new(BufReader::new(io::stdin()))),
-        _ => Ok(Box::new(BufReader::new(File::open(filename)?))),
-    }
-}
-
 pub fn run(config: Config) -> MyResult<()> {
     let num_files = config.files.len();
     for (file_num, filename) in config.files.iter().enumerate() {
         match open(filename) {
+            Err(err) => eprintln!("{}: {}", &filename, err),
             Ok(mut file) => {
                 if num_files > 1 {
                     println!(
@@ -83,9 +78,10 @@ pub fn run(config: Config) -> MyResult<()> {
                 }
 
                 if let Some(v) = config.bytes {
-                    let mut buffer = vec![0; v as usize];
-                    let bytes_read = file.read(&mut buffer)?;
-                    print!("{}", String::from_utf8_lossy(&mut buffer[..bytes_read]));
+                    let mut handle = file.take(v as u64);
+                    let mut buffer = vec![0; v];
+                    let bytes_read = handle.read(&mut buffer)?;
+                    print!("{}", String::from_utf8_lossy(&buffer[..bytes_read]));
                 } else {
                     let mut line = String::new();
                     for _ in 0..config.lines {
@@ -100,13 +96,16 @@ pub fn run(config: Config) -> MyResult<()> {
                     }
                 }
             }
-            Err(err) => {
-                println!("things!");
-                println!("{}:{}", &filename, err);
-            }
         }
     }
     Ok(())
+}
+
+pub fn open(filename: &str) -> MyResult<Box<dyn BufRead>> {
+    match filename {
+        "_" => Ok(Box::new(BufReader::new(io::stdin()))),
+        _ => Ok(Box::new(BufReader::new(File::open(filename)?))),
+    }
 }
 
 fn parse_positive_int(val: &str) -> MyResult<usize> {

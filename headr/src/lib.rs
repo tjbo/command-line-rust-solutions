@@ -18,13 +18,6 @@ pub fn get_args() -> MyResult<Config> {
         .author("tjbo")
         .about("Rust head")
         .arg(
-            Arg::with_name("files")
-                .value_name("FILE")
-                .help("Input file(s)")
-                .multiple(true)
-                .default_value("-"),
-        )
-        .arg(
             Arg::with_name("lines")
                 .short("n")
                 .long("lines")
@@ -40,6 +33,13 @@ pub fn get_args() -> MyResult<Config> {
                 .takes_value(true)
                 .conflicts_with("lines")
                 .help("Number of bytes"),
+        )
+        .arg(
+            Arg::with_name("files")
+                .value_name("FILE")
+                .help("Input file(s)")
+                .multiple(true)
+                .default_value("-"),
         )
         .get_matches();
 
@@ -70,9 +70,8 @@ pub fn open(filename: &str) -> MyResult<Box<dyn BufRead>> {
 }
 
 pub fn run(config: Config) -> MyResult<()> {
+    let num_files = config.files.len();
     for (file_num, filename) in config.files.iter().enumerate() {
-        let num_files = config.files.len();
-
         match open(filename) {
             Ok(mut file) => {
                 if num_files > 1 {
@@ -84,9 +83,8 @@ pub fn run(config: Config) -> MyResult<()> {
                 }
 
                 if let Some(v) = config.bytes {
-                    let mut handle = file.take(v as u64);
-                    let mut buffer = vec![0; v];
-                    let bytes_read = handle.read(&mut buffer)?;
+                    let mut buffer = vec![0; v as usize];
+                    let bytes_read = file.read(&mut buffer)?;
                     print!("{}", String::from_utf8_lossy(&mut buffer[..bytes_read]));
                 } else {
                     let mut line = String::new();
@@ -103,6 +101,7 @@ pub fn run(config: Config) -> MyResult<()> {
                 }
             }
             Err(err) => {
+                println!("things!");
                 println!("{}:{}", &filename, err);
             }
         }
